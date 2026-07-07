@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BeLove · Finanzas</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0f1411;--panel:#161d19;--panel-2:#1d2622;--line:#2a342f;
+    --text:#e9efe9;--muted:#8aa297;--green:#3ecf8e;--red:#e0654f;--amber:#d9b35a;
+    --mono:'JetBrains Mono','Courier New',monospace;--sans:'Inter',-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;}
+
+  /* LOGIN */
+  #login{min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1.5rem;text-align:center;padding:2rem;}
+  #login h1{font-family:var(--mono);font-size:1.4rem;letter-spacing:.05em;color:var(--green)}
+  #login p{color:var(--muted);font-size:.9rem}
+  #login input{background:var(--panel);border:1px solid var(--line);color:var(--text);padding:.8rem 1rem;border-radius:6px;font-family:var(--mono);width:240px;font-size:1rem;text-align:center;}
+  #login input:focus{outline:none;border-color:var(--green)}
+  #login button{background:var(--green);color:#08130d;border:none;padding:.8rem 2rem;border-radius:6px;font-weight:600;cursor:pointer;font-size:.95rem;}
+  #login button:hover{background:#5ee0a8}
+  #login .err{color:var(--red);font-size:.85rem;height:1.2rem}
+
+  /* DASHBOARD */
+  #app{display:none}
+  header{display:flex;justify-content:space-between;align-items:center;padding:1.2rem 2rem;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:10;}
+  header h1{font-family:var(--mono);font-size:1.1rem;color:var(--green);letter-spacing:.04em}
+  header .sub{color:var(--muted);font-size:.78rem;margin-top:.2rem}
+  .hbtn{background:var(--panel-2);border:1px solid var(--line);color:var(--text);padding:.6rem 1.3rem;border-radius:6px;cursor:pointer;font-size:.85rem;font-family:var(--sans);}
+  .hbtn:hover{border-color:var(--green)}
+  .hbtn:disabled{opacity:.5;cursor:wait}
+  #iaBtn{background:linear-gradient(135deg,#3ecf8e,#a78bfa);border:none;color:#08130d;padding:.6rem 1.3rem;border-radius:6px;cursor:pointer;font-size:.85rem;font-weight:600;margin-left:.6rem;font-family:var(--sans);}
+  #iaBtn:hover{filter:brightness(1.08)}
+  #iaBtn:disabled{opacity:.5;cursor:wait}
+  #status{font-size:.78rem;color:var(--muted);margin-top:.4rem}
+
+  main{padding:2rem;max-width:1400px;margin:0 auto}
+
+  /* ALERTAS */
+  .alert{background:#2a2118;border:1px solid var(--amber);color:var(--amber);border-radius:8px;padding:1rem 1.2rem;margin-bottom:1rem;font-size:.85rem;display:none;}
+  .alert-item{background:#1e2820;border:1px solid #3ecf8e44;border-left:3px solid var(--red);border-radius:6px;padding:.7rem 1rem;margin-bottom:.5rem;font-size:.83rem;display:flex;justify-content:space-between;align-items:center;}
+  .alert-item .ai-label{color:var(--muted);font-size:.75rem}
+  .alert-item .ai-val{font-family:var(--mono);color:var(--red)}
+  #panelAlertas{background:var(--panel);border:1px solid var(--red);border-radius:10px;padding:1.3rem;margin-bottom:1rem;display:none;}
+  #panelAlertas h2{font-size:.85rem;text-transform:uppercase;letter-spacing:.08em;color:var(--red);margin-bottom:.8rem}
+
+  /* IA */
+  #panelIA{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:1.3rem;margin-bottom:1rem;display:none;}
+  #panelIA h2{font-size:.85rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:1rem}
+  #panelIA .contenido{font-size:.9rem;line-height:1.7;white-space:pre-wrap}
+  #panelIA .contenido h3{color:var(--green);font-size:.95rem;margin:1rem 0 .3rem}
+  #panelIA .contenido strong{color:var(--amber)}
+
+  /* KPIs */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1rem;margin-bottom:1.5rem}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:1.2rem 1.4rem;}
+  .kpi .label{color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em}
+  .kpi .value{font-family:var(--mono);font-size:1.4rem;margin-top:.4rem;font-weight:600}
+  .kpi .sub{font-size:.72rem;color:var(--muted);margin-top:.3rem}
+  .kpi.green .value{color:var(--green)}
+  .kpi.red .value{color:var(--red)}
+  .kpi.amber .value{color:var(--amber)}
+  .kpi.proj .value{color:#a78bfa}
+
+  /* FILTROS */
+  .filters{display:flex;gap:.8rem;margin-bottom:1.5rem;flex-wrap:wrap;align-items:center;background:var(--panel);padding:1rem;border-radius:10px;border:1px solid var(--line);}
+  .filters select,.filters input{background:var(--panel-2);border:1px solid var(--line);color:var(--text);padding:.45rem .7rem;border-radius:6px;font-family:var(--sans);font-size:.83rem;}
+  .filters label{color:var(--muted);font-size:.76rem;align-self:center}
+  .filters-sep{width:1px;height:20px;background:var(--line)}
+
+  /* GRID */
+  .grid{display:grid;grid-template-columns:1.4fr 1fr;gap:1.2rem;margin-bottom:1.2rem}
+  .grid-1{display:grid;grid-template-columns:1fr;gap:1.2rem;margin-bottom:1.2rem}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:1.3rem;}
+  .panel h2{font-size:.82rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:1rem}
+  .panel canvas{max-height:280px}
+
+  /* TABLA */
+  table{width:100%;border-collapse:collapse;font-size:.83rem}
+  thead th{text-align:left;color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;padding:.5rem .6rem;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);}
+  tbody td{padding:.45rem .6rem;border-bottom:1px solid var(--line)}
+  tbody tr:hover{background:var(--panel-2)}
+  .num{font-family:var(--mono);text-align:right}
+  .pos{color:var(--green)}
+  .neg{color:var(--red)}
+  .scrollbox{max-height:340px;overflow-y:auto}
+
+  /* SIN CLASIFICAR */
+  #panelSinClas{background:var(--panel);border:1px solid var(--amber);border-radius:10px;padding:1.3rem;margin-bottom:1rem;display:none;}
+  #panelSinClas h2{font-size:.85rem;text-transform:uppercase;letter-spacing:.08em;color:var(--amber);margin-bottom:.8rem}
+  .sc-row{display:grid;grid-template-columns:1fr 1fr 120px 100px;gap:.5rem;align-items:center;padding:.5rem 0;border-bottom:1px solid var(--line)}
+  .sc-row:last-child{border-bottom:none}
+  .sc-row input,.sc-row select{background:var(--panel-2);border:1px solid var(--line);color:var(--text);padding:.4rem .6rem;border-radius:5px;font-size:.8rem;font-family:var(--sans);}
+  .sc-btn{background:var(--green);color:#08130d;border:none;padding:.4rem .8rem;border-radius:5px;cursor:pointer;font-size:.78rem;font-weight:600;}
+  .sc-btn:hover{background:#5ee0a8}
+  .sc-desc{font-size:.8rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sc-monto{font-family:var(--mono);font-size:.8rem}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login">
+  <h1>BELOVE // FINANZAS</h1>
+  <p>Dashboard privado de movimientos bancarios.<br>Ingresa la clave de acceso.</p>
+  <input type="password" id="pwInput" placeholder="Contraseña" autocomplete="off" onkeydown="if(event.key==='Enter')tryLogin()">
+  <button onclick="tryLogin()">Entrar</button>
+  <div class="err" id="loginErr"></div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <header>
+    <div>
+      <h1>BELOVE // FINANZAS</h1>
+      <div class="sub" id="lastUpdate">—</div>
+    </div>
+    <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:.4rem">
+      <div style="display:flex;gap:.5rem">
+        <button class="hbtn" id="refreshBtn" onclick="actualizar()">↻ Actualizar desde banco</button>
+        <button id="iaBtn" onclick="analisisIA()">✦ Análisis IA</button>
+      </div>
+      <div id="status"></div>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ALERTAS AUTOMÁTICAS -->
+    <div id="panelAlertas">
+      <h2>⚠ Alertas — categorías sobre el promedio histórico (+15%)</h2>
+      <div id="listaAlertas"></div>
+    </div>
+
+    <!-- SIN CLASIFICAR -->
+    <div id="panelSinClas">
+      <h2>Movimientos sin clasificar</h2>
+      <div id="listaSinClas"></div>
+    </div>
+
+    <!-- ANÁLISIS IA -->
+    <div id="panelIA">
+      <h2>Análisis IA del período filtrado</h2>
+      <div class="contenido" id="contenidoIA"></div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpis" id="kpiGrid">
+      <div class="kpi green"><div class="label">Ingresos</div><div class="value" id="kpiIngresos">—</div></div>
+      <div class="kpi red"><div class="label">Gastos</div><div class="value" id="kpiGastos">—</div></div>
+      <div class="kpi"><div class="label">Balance</div><div class="value" id="kpiBalance">—</div></div>
+      <div class="kpi amber"><div class="label">Movimientos</div><div class="value" id="kpiCount">—</div></div>
+    </div>
+
+    <!-- FILTROS -->
+    <div class="filters">
+      <label>Año</label>
+      <select id="filtroAnio" onchange="render()"><option value="">Todos</option></select>
+      <label>Mes</label>
+      <select id="filtroMes" onchange="render()"><option value="">Todos</option></select>
+      <div class="filters-sep"></div>
+      <label>Comparar con año</label>
+      <select id="filtroAnioComp" onchange="render()"><option value="">Sin comparación</option></select>
+      <div class="filters-sep"></div>
+      <label>Tipo</label>
+      <select id="filtroTipo" onchange="poblarGeneral();render()">
+        <option value="">Todos</option>
+        <option value="Ingresos">Ingresos</option>
+        <option value="Gasto">Gastos</option>
+      </select>
+      <label>Categoría</label>
+      <select id="filtroGeneral" onchange="render()"><option value="">Todas</option></select>
+    </div>
+
+    <!-- GRÁFICOS -->
+    <div class="grid">
+      <div class="panel">
+        <h2>Ingresos vs Gastos por mes</h2>
+        <canvas id="chartMensual"></canvas>
+      </div>
+      <div class="panel">
+        <h2>Gastos por categoría</h2>
+        <canvas id="chartCategorias"></canvas>
+      </div>
+    </div>
+
+    <div class="grid-1">
+      <div class="panel">
+        <h2>Flujo neto por mes</h2>
+        <canvas id="chartNeto"></canvas>
+      </div>
+    </div>
+
+    <!-- TABLAS PIVOT -->
+    <div class="grid-1">
+      <div class="panel">
+        <h2>Resumen por categoría general × mes</h2>
+        <div class="scrollbox">
+          <table id="tablaPivotGeneral"><thead></thead><tbody></tbody></table>
+        </div>
+      </div>
+    </div>
+    <div class="grid-1">
+      <div class="panel">
+        <h2>Detalle por categoría × mes</h2>
+        <div class="scrollbox">
+          <table id="tablaPivotDetalle"><thead></thead><tbody></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- MOVIMIENTOS -->
+    <div class="grid-1">
+      <div class="panel">
+        <h2>Movimientos (últimos 200)</h2>
+        <div class="scrollbox">
+          <table>
+            <thead><tr><th>Fecha</th><th>Descripción</th><th>Concepto</th><th>Tipo</th><th>Detalle</th><th>General</th><th class="num">Monto</th></tr></thead>
+            <tbody id="tablaMovimientos"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbwATKvZR97IjfBCmdddkkpnO8pcVjg9FUe-cXcjWwTDkgGxy-8BsTOdkOdTCPv2R9QS/exec';
+
+let DATA = [];
+let charts = {};
+const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MESES_L = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+// ======== LOGIN ========
+function tryLogin(){
+  const pw = document.getElementById('pwInput').value.trim();
+  if(!pw){ document.getElementById('loginErr').textContent='Ingresa una contraseña.'; return; }
+  document.getElementById('loginErr').textContent = 'Verificando...';
+  sessionStorage.setItem('belove_token', pw);
+  cargarDatos(false);
+}
+
+async function cargarDatos(esActualizacion){
+  try{
+    const token = sessionStorage.getItem('belove_token');
+    const url = API_URL + '?token=' + encodeURIComponent(token) + (esActualizacion ? '&action=clasificar' : '');
+    const res = await fetch(url);
+    const json = await res.json();
+
+    if(json.error){
+      document.getElementById('loginErr').textContent = 'Contraseña incorrecta.';
+      sessionStorage.removeItem('belove_token');
+      return;
+    }
+
+    DATA = json.movimientos;
+    document.getElementById('login').style.display='none';
+    document.getElementById('app').style.display='block';
+
+    if(json.resumen){
+      const r = json.resumen;
+      document.getElementById('status').textContent = `Procesados: ${r.procesados} · Sin clasificar: ${r.sin_clasificar} · Duplicados saltados: ${r.duplicados||0}`;
+    }
+    document.getElementById('lastUpdate').textContent = 'Última carga: ' + new Date().toLocaleString('es-CL');
+
+    poblarFiltros();
+    render();
+    renderSinClasificar();
+  }catch(err){
+    document.getElementById('loginErr').textContent = 'Error de conexión. Revisa la URL del API.';
+  }
+}
+
+async function actualizar(){
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled=true; btn.textContent='Actualizando...';
+  await cargarDatos(true);
+  btn.disabled=false; btn.textContent='↻ Actualizar desde banco';
+}
+
+// ======== FILTROS ========
+function poblarFiltros(){
+  const anios = [...new Set(DATA.map(d=>d['Año']))].sort();
+  const selAnio = document.getElementById('filtroAnio');
+  selAnio.innerHTML = '<option value="">Todos</option>' + anios.map(a=>`<option value="${a}">${a}</option>`).join('');
+
+  const selComp = document.getElementById('filtroAnioComp');
+  selComp.innerHTML = '<option value="">Sin comparación</option>' + anios.map(a=>`<option value="${a}">${a}</option>`).join('');
+
+  const selMes = document.getElementById('filtroMes');
+  selMes.innerHTML = '<option value="">Todos</option>' + MESES_L.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('');
+
+  poblarGeneral();
+}
+
+function poblarGeneral(){
+  const tipo = document.getElementById('filtroTipo').value;
+  let subset = DATA;
+  if(tipo) subset = DATA.filter(d=>d['Tipo Gasto']===tipo);
+  const generales = [...new Set(subset.map(d=>d['General Analisis']).filter(Boolean))].sort();
+  const sel = document.getElementById('filtroGeneral');
+  const actual = sel.value;
+  sel.innerHTML = '<option value="">Todas</option>' + generales.map(g=>`<option value="${g}">${g}</option>`).join('');
+  if(generales.includes(actual)) sel.value = actual;
+}
+
+function filtrarData(overrideAnio){
+  const anio = overrideAnio !== undefined ? overrideAnio : document.getElementById('filtroAnio').value;
+  const mes = document.getElementById('filtroMes').value;
+  const tipo = document.getElementById('filtroTipo').value;
+  const general = document.getElementById('filtroGeneral').value;
+  return DATA.filter(d=>{
+    if(anio && String(d['Año']) !== String(anio)) return false;
+    if(mes && String(d['Mes']) !== mes) return false;
+    if(tipo && d['Tipo Gasto'] !== tipo) return false;
+    if(general && d['General Analisis'] !== general) return false;
+    return true;
+  });
+}
+
+// ======== RENDER PRINCIPAL ========
+function fmt(n){ return '$' + Math.round(n).toLocaleString('es-CL'); }
+function mesLabel(a,m){ return `${MESES[(m||1)-1]} ${a}`; }
+
+function render(){
+  const data = filtrarData();
+  const anioComp = document.getElementById('filtroAnioComp').value;
+  const anioSel = document.getElementById('filtroAnio').value;
+  const dataComp = anioComp ? filtrarData(anioComp) : [];
+
+  // KPIs
+  let ingresos=0, gastos=0;
+  data.forEach(d=>{
+    const m = Number(d['MONTO'])||0;
+    if(d['Tipo Gasto']==='Ingresos') ingresos+=m; else gastos+=m;
+  });
+  const balance = ingresos + gastos;
+  document.getElementById('kpiIngresos').textContent = fmt(ingresos);
+  document.getElementById('kpiGastos').textContent = fmt(gastos);
+  document.getElementById('kpiBalance').textContent = fmt(balance);
+  document.getElementById('kpiBalance').className = 'value ' + (balance>=0?'pos':'neg');
+  document.getElementById('kpiCount').textContent = data.length;
+
+  // Alertas automáticas (15% sobre promedio histórico)
+  renderAlertas(data);
+
+  // Gráficos
+  renderChartMensual(data, dataComp, anioComp);
+  renderChartNeto(data, dataComp, anioComp);
+  renderChartCategorias(data);
+  renderPivotTables(data);
+  renderTabla(data);
+}
+
+// ======== ALERTAS ========
+function renderAlertas(data){
+  // Calcular promedio mensual histórico por categoría general (gastos)
+  const porCatMes = {};
+  DATA.forEach(d=>{
+    if(d['Tipo Gasto']==='Ingresos') return;
+    const cat = d['General Analisis']||'Sin categoría';
+    const key = `${d['Año']}-${String(d['Mes']).padStart(2,'0')}`;
+    if(!porCatMes[cat]) porCatMes[cat]={};
+    porCatMes[cat][key] = (porCatMes[cat][key]||0) + Math.abs(Number(d['MONTO'])||0);
+  });
+
+  // Promedio histórico por categoría
+  const promedios = {};
+  Object.entries(porCatMes).forEach(([cat, meses])=>{
+    const vals = Object.values(meses);
+    promedios[cat] = vals.reduce((a,b)=>a+b,0)/vals.length;
+  });
+
+  // Gastos del período filtrado por categoría
+  const gastosData = {};
+  data.forEach(d=>{
+    if(d['Tipo Gasto']==='Ingresos') return;
+    const cat = d['General Analisis']||'Sin categoría';
+    gastosData[cat] = (gastosData[cat]||0) + Math.abs(Number(d['MONTO'])||0);
+  });
+
+  const alertas = [];
+  const mesFiltro = document.getElementById('filtroMes').value;
+  if(!mesFiltro) return; // Solo alertar cuando hay un mes específico seleccionado
+
+  Object.entries(gastosData).forEach(([cat, total])=>{
+    const prom = promedios[cat]||0;
+    if(prom>0 && total > prom*1.15){
+      alertas.push({cat, total, prom, pct: ((total/prom)-1)*100});
+    }
+  });
+
+  const panel = document.getElementById('panelAlertas');
+  if(alertas.length===0){ panel.style.display='none'; return; }
+  panel.style.display='block';
+  document.getElementById('listaAlertas').innerHTML = alertas
+    .sort((a,b)=>b.pct-a.pct)
+    .map(a=>`<div class="alert-item">
+      <div><div style="font-weight:600">${a.cat}</div><div class="ai-label">Promedio histórico: ${fmt(a.prom)}</div></div>
+      <div style="text-align:right"><div class="ai-val">${fmt(a.total)}</div><div class="ai-label">+${Math.round(a.pct)}% sobre promedio</div></div>
+    </div>`).join('');
+}
+
+// ======== SIN CLASIFICAR ========
+function renderSinClasificar(){
+  const sinClas = DATA.filter(d=>d['CONCEPTO']==='SIN CLASIFICAR');
+  const panel = document.getElementById('panelSinClas');
+  if(sinClas.length===0){ panel.style.display='none'; return; }
+  panel.style.display='block';
+
+  const conceptos = [...new Set(DATA.filter(d=>d['CONCEPTO'] && d['CONCEPTO']!=='SIN CLASIFICAR').map(d=>d['CONCEPTO']))].sort();
+  const generales = [...new Set(DATA.filter(d=>d['General Analisis']).map(d=>d['General Analisis']))].sort();
+
+  // Mapa concepto -> {tipo, detalle, general} del historial
+  const mapaConcepto = {};
+  DATA.forEach(d=>{
+    if(d['CONCEPTO'] && d['CONCEPTO']!=='SIN CLASIFICAR' && !mapaConcepto[d['CONCEPTO']]){
+      mapaConcepto[d['CONCEPTO']] = {
+        tipo: d['Tipo Gasto']||'',
+        detalle: d['Detalle Gasto']||'',
+        general: d['General Analisis']||''
+      };
+    }
+  });
+
+  document.getElementById('listaSinClas').innerHTML =
+    `<div style="display:grid;grid-template-columns:1.5fr 1fr 100px 100px 120px 80px;gap:.4rem;font-weight:600;color:var(--muted);font-size:.7rem;text-transform:uppercase;padding:.3rem .2rem;border-bottom:1px solid var(--line);margin-bottom:.4rem">
+      <div>Descripción</div><div>Concepto</div><div>Tipo</div><div>Detalle</div><div>General</div><div></div>
+    </div>` +
+    sinClas.slice(0,30).map((d,i)=>`
+    <div style="display:grid;grid-template-columns:1.5fr 1fr 100px 100px 120px 80px;gap:.4rem;align-items:center;padding:.4rem .2rem;border-bottom:1px solid var(--line)" id="scrow-${i}">
+      <div style="font-size:.78rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(d['DESCRIPCIÓN MOVIMIENTO']||'').replace(/"/g,'')}">${d['DESCRIPCIÓN MOVIMIENTO']||''} <span style="color:${Number(d['MONTO'])>=0?'var(--green)':'var(--red)'};font-family:var(--mono)">${fmt(Number(d['MONTO'])||0)}</span></div>
+      <div style="display:flex;flex-direction:column;gap:.25rem">
+        <select id="sc-sel-${i}" onchange="onConceptoChange(${i})" style="background:var(--panel-2);border:1px solid var(--line);color:var(--text);padding:.3rem .4rem;border-radius:5px;font-size:.76rem">
+          <option value="">Elige...</option>
+          ${conceptos.map(c=>`<option value="${c}">${c}</option>`).join('')}
+          <option value="__nuevo__">+ Nuevo concepto</option>
+        </select>
+        <input id="sc-inp-${i}" placeholder="Nuevo concepto" style="display:none;background:var(--panel-2);border:1px solid var(--line);color:var(--text);padding:.3rem .4rem;border-radius:5px;font-size:.76rem">
+      </div>
+      <select id="sc-tipo-${i}" style="background:var(--panel-2);border:1px solid var(--line);color:var(--text);padding:.3rem .4rem;border-radius:5px;font-size:.76rem">
+        <option value="">—</option>
+        <option value="Ingresos">Ingresos</option>
+        <option value="Gasto">Gasto</option>
+      </select>
+      <input id="sc-detalle-${i}" placeholder="Detalle" style="background:var(--panel-2);border:1px solid var(--line);color:var(--text);padding:.3rem .4rem;border-radius:5px;font-size:.76rem">
+      <select id="sc-general-${i}" style="background:var(--panel-2);border:1px solid var(--line);color:var(--text);padding:.3rem .4rem;border-radius:5px;font-size:.76rem">
+        <option value="">—</option>
+        ${generales.map(g=>`<option value="${g}">${g}</option>`).join('')}
+        <option value="__nuevo__">+ Nueva categoría</option>
+      </select>
+      <button style="background:var(--green);color:#08130d;border:none;padding:.4rem .6rem;border-radius:5px;cursor:pointer;font-size:.76rem;font-weight:600" onclick="guardarClasificacion(${i},'${(d['DESCRIPCIÓN MOVIMIENTO']||'').replace(/'/g,"\\'")}')">Guardar</button>
+    </div>`).join('');
+
+  // Guardar mapa para autocompletar
+  window._mapaConcepto = mapaConcepto;
+}
+
+function onConceptoChange(i){
+  const sel = document.getElementById(`sc-sel-${i}`);
+  const inp = document.getElementById(`sc-inp-${i}`);
+  inp.style.display = sel.value==='__nuevo__' ? 'block' : 'none';
+
+  // Autocompletar tipo/detalle/general si el concepto ya existe en el historial
+  const mapa = window._mapaConcepto || {};
+  const info = mapa[sel.value];
+  if(info){
+    const tipo = document.getElementById(`sc-tipo-${i}`);
+    const detalle = document.getElementById(`sc-detalle-${i}`);
+    const general = document.getElementById(`sc-general-${i}`);
+    if(tipo) tipo.value = info.tipo || '';
+    if(detalle) detalle.value = info.detalle || '';
+    if(general && [...general.options].some(o=>o.value===info.general)) general.value = info.general;
+  }
+}
+
+async function guardarClasificacion(i, descripcion){
+  const sel = document.getElementById(`sc-sel-${i}`);
+  const inp = document.getElementById(`sc-inp-${i}`);
+  const concepto = sel.value==='__nuevo__' ? inp.value.trim() : sel.value;
+  if(!concepto || concepto==='__nuevo__'){ alert('Elige o escribe un concepto.'); return; }
+
+  const tipo    = document.getElementById(`sc-tipo-${i}`)?.value || '';
+  const detalle = document.getElementById(`sc-detalle-${i}`)?.value.trim() || '';
+  let general   = document.getElementById(`sc-general-${i}`)?.value || '';
+  if(general==='__nuevo__'){
+    general = prompt('Escribe el nombre de la nueva categoría General Análisis:') || '';
+  }
+
+  const token = sessionStorage.getItem('belove_token');
+  try{
+    const params = new URLSearchParams({
+      token, action:'guardarRegla',
+      descripcion, concepto, tipo, detalle, general
+    });
+    const res = await fetch(API_URL + '?' + params.toString());
+    const json = await res.json();
+    if(json.ok){
+      // Marcar fila como guardada visualmente
+      const row = document.getElementById(`scrow-${i}`);
+      if(row){ row.style.opacity='0.4'; row.style.pointerEvents='none'; }
+      // Actualizar DATA en memoria
+      DATA.forEach(d=>{
+        if(d['DESCRIPCIÓN MOVIMIENTO']===descripcion && d['CONCEPTO']==='SIN CLASIFICAR'){
+          d['CONCEPTO'] = concepto;
+          d['Tipo Gasto'] = json.tipoFinal || tipo;
+          d['Detalle Gasto'] = json.detalleFinal || detalle;
+          d['General Analisis'] = json.generalFinal || general;
+        }
+      });
+    } else {
+      alert('Error: ' + (json.error||'desconocido'));
+    }
+  }catch(e){ alert('Error de conexión'); }
+}
+
+// ======== GRÁFICOS ========
+function renderChartMensual(data, dataComp, anioComp){
+  const porMes = {};
+  data.forEach(d=>{
+    const key = `${d['Año']}-${String(d['Mes']).padStart(2,'0')}`;
+    if(!porMes[key]) porMes[key]={ingresos:0,gastos:0};
+    const m = Number(d['MONTO'])||0;
+    if(d['Tipo Gasto']==='Ingresos') porMes[key].ingresos+=m; else porMes[key].gastos+=m;
+  });
+
+  let porMesComp = {};
+  if(dataComp.length){
+    dataComp.forEach(d=>{
+      const mes = String(d['Mes']).padStart(2,'0');
+      // Usar el año de comparación pero mapear al mes del año principal para alinear
+      const anioSel = document.getElementById('filtroAnio').value || new Date().getFullYear();
+      const key = `${anioSel}-${mes}`;
+      if(!porMesComp[key]) porMesComp[key]={ingresos:0,gastos:0};
+      const m = Number(d['MONTO'])||0;
+      if(d['Tipo Gasto']==='Ingresos') porMesComp[key].ingresos+=m; else porMesComp[key].gastos+=m;
+    });
+  }
+
+  const allKeys = [...new Set([...Object.keys(porMes), ...Object.keys(porMesComp)])].sort();
+  const labels = allKeys.map(k=>{ const [a,m]=k.split('-'); return mesLabel(a,parseInt(m)); });
+
+  const datasets = [
+    {label:'Ingresos', data:allKeys.map(k=>(porMes[k]||{}).ingresos||0), backgroundColor:'#3ecf8e'},
+    {label:'Gastos', data:allKeys.map(k=>Math.abs((porMes[k]||{}).gastos||0)), backgroundColor:'#e0654f'},
+  ];
+  if(dataComp.length){
+    datasets.push(
+      {label:`Ingresos ${anioComp}`, data:allKeys.map(k=>(porMesComp[k]||{}).ingresos||0), backgroundColor:'#3ecf8e44', borderColor:'#3ecf8e', borderWidth:1, type:'line', fill:false},
+      {label:`Gastos ${anioComp}`, data:allKeys.map(k=>Math.abs((porMesComp[k]||{}).gastos||0)), backgroundColor:'#e0654f44', borderColor:'#e0654f', borderWidth:1, type:'line', fill:false}
+    );
+  }
+
+  if(charts.mensual) charts.mensual.destroy();
+  charts.mensual = new Chart(document.getElementById('chartMensual'),{
+    type:'bar', data:{labels, datasets},
+    options:{responsive:true,plugins:{legend:{labels:{color:'#e9efe9',font:{size:10}}}},
+      scales:{x:{ticks:{color:'#8aa297'},grid:{color:'#2a342f'}},y:{ticks:{color:'#8aa297'},grid:{color:'#2a342f'}}}}
+  });
+}
+
+function renderChartNeto(data, dataComp, anioComp){
+  const porMes = {};
+  data.forEach(d=>{
+    const key = `${d['Año']}-${String(d['Mes']).padStart(2,'0')}`;
+    porMes[key] = (porMes[key]||0) + (Number(d['MONTO'])||0);
+  });
+
+  let porMesComp = {};
+  if(dataComp.length){
+    const anioSel = document.getElementById('filtroAnio').value || new Date().getFullYear();
+    dataComp.forEach(d=>{
+      const mes = String(d['Mes']).padStart(2,'0');
+      const key = `${anioSel}-${mes}`;
+      porMesComp[key] = (porMesComp[key]||0) + (Number(d['MONTO'])||0);
+    });
+  }
+
+  const allKeys = [...new Set([...Object.keys(porMes), ...Object.keys(porMesComp)])].sort();
+  const labels = allKeys.map(k=>{ const [a,m]=k.split('-'); return mesLabel(a,parseInt(m)); });
+  const valores = allKeys.map(k=>porMes[k]||null);
+  const valoresComp = allKeys.map(k=>porMesComp[k]!==undefined?porMesComp[k]:null);
+
+  const datasets = [{
+    label:'Flujo neto', data:valores,
+    borderColor:'#3ecf8e', backgroundColor:'rgba(62,207,142,0.1)',
+    segment:{borderColor:ctx=>ctx.p0.parsed.y<0||ctx.p1.parsed.y<0?'#e0654f':'#3ecf8e'},
+    pointBackgroundColor:ctx=>valores[ctx.dataIndex]>=0?'#3ecf8e':'#e0654f',
+    tension:0.25, fill:true, spanGaps:true
+  }];
+  if(dataComp.length){
+    datasets.push({
+      label:`Flujo neto ${anioComp}`, data:valoresComp,
+      borderColor:'#d9b35a', backgroundColor:'transparent',
+      borderDash:[5,3], tension:0.25, spanGaps:true,
+      pointBackgroundColor:'#d9b35a'
+    });
+  }
+
+  if(charts.neto) charts.neto.destroy();
+  charts.neto = new Chart(document.getElementById('chartNeto'),{
+    type:'line', data:{labels, datasets},
+    options:{responsive:true,plugins:{legend:{labels:{color:'#e9efe9',font:{size:10}}}},
+      scales:{x:{ticks:{color:'#8aa297'},grid:{color:'#2a342f'}},y:{ticks:{color:'#8aa297'},grid:{color:'#2a342f'}}}}
+  });
+}
+
+function renderChartCategorias(data){
+  const porCat = {};
+  data.forEach(d=>{
+    if(d['Tipo Gasto']==='Ingresos') return;
+    const cat = d['General Analisis']||'Sin categoría';
+    porCat[cat] = (porCat[cat]||0)+Math.abs(Number(d['MONTO'])||0);
+  });
+  const entries = Object.entries(porCat).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  if(charts.categorias) charts.categorias.destroy();
+  charts.categorias = new Chart(document.getElementById('chartCategorias'),{
+    type:'doughnut',
+    data:{labels:entries.map(e=>e[0]),datasets:[{data:entries.map(e=>e[1]),backgroundColor:['#3ecf8e','#e0654f','#d9b35a','#5ee0a8','#a78bfa','#60a5fa','#f472b6','#94a3b8']}]},
+    options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#e9efe9',boxWidth:12,font:{size:10}}}}}
+  });
+}
+
+// ======== PIVOT TABLES ========
+function renderPivotTables(data){
+  const colKeys = [...new Set(data.map(d=>`${d['Año']}-${String(d['Mes']).padStart(2,'0')}`))].sort();
+  const colLabels = colKeys.map(k=>{ const [a,m]=k.split('-'); return mesLabel(a,parseInt(m)); });
+
+  const t1 = document.getElementById('tablaPivotGeneral');
+  t1.querySelector('thead').innerHTML = '<tr><th>Categoría</th>'+colLabels.map(c=>`<th class="num">${c}</th>`).join('')+'<th class="num">Total</th></tr>';
+  let h1='';
+  ['Ingresos','Gasto'].forEach(tipo=>{
+    const sub = data.filter(d=>d['Tipo Gasto']===tipo);
+    h1+=pivotRow(tipo,sub,colKeys,true);
+    [...new Set(sub.map(d=>d['General Analisis']).filter(Boolean))].sort().forEach(gen=>{
+      h1+=pivotRow(gen,sub.filter(d=>d['General Analisis']===gen),colKeys,false);
+    });
+  });
+  t1.querySelector('tbody').innerHTML=h1;
+
+  const t2 = document.getElementById('tablaPivotDetalle');
+  t2.querySelector('thead').innerHTML = '<tr><th>Categoría / Detalle</th>'+colLabels.map(c=>`<th class="num">${c}</th>`).join('')+'<th class="num">Total</th></tr>';
+  let h2='';
+  ['Ingresos','Gasto'].forEach(tipo=>{
+    const sub = data.filter(d=>d['Tipo Gasto']===tipo);
+    h2+=pivotRow(tipo,sub,colKeys,true);
+    [...new Set(sub.map(d=>d['General Analisis']).filter(Boolean))].sort().forEach(gen=>{
+      const subgen=sub.filter(d=>d['General Analisis']===gen);
+      h2+=pivotRow('\u00a0\u00a0'+gen,subgen,colKeys,true,true);
+      [...new Set(subgen.map(d=>d['Detalle Gasto']).filter(Boolean))].sort().forEach(det=>{
+        h2+=pivotRow('\u00a0\u00a0\u00a0\u00a0'+det,subgen.filter(d=>d['Detalle Gasto']===det),colKeys,false);
+      });
+    });
+  });
+  t2.querySelector('tbody').innerHTML=h2;
+}
+
+function pivotRow(label,rows,colKeys,bold,italic){
+  let total=0;
+  const cells=colKeys.map(k=>{
+    const [a,m]=k.split('-');
+    const sum=rows.filter(d=>d['Año']==a&&String(d['Mes'])==String(parseInt(m))).reduce((acc,d)=>acc+(Number(d['MONTO'])||0),0);
+    total+=sum;
+    return `<td class="num ${sum===0?'':sum>0?'pos':'neg'}">${sum===0?'':fmt(sum)}</td>`;
+  });
+  const style=bold?'font-weight:700;':(italic?'color:var(--muted);font-style:italic;':'');
+  return `<tr style="${style}"><td>${label}</td>${cells.join('')}<td class="num ${total>0?'pos':total<0?'neg':''}">${total===0?'':fmt(total)}</td></tr>`;
+}
+
+// ======== TABLA MOVIMIENTOS ========
+function renderTabla(data){
+  const sorted=[...data].sort((a,b)=>{
+    const da=new Date(a['Año'],(a['Mes']||1)-1,a['Dia']||1);
+    const db=new Date(b['Año'],(b['Mes']||1)-1,b['Dia']||1);
+    return db-da;
+  }).slice(0,200);
+  document.getElementById('tablaMovimientos').innerHTML=sorted.map(d=>{
+    const m=Number(d['MONTO'])||0;
+    const sc = d['CONCEPTO']==='SIN CLASIFICAR' ? 'style="background:#2a2118"' : '';
+    return `<tr ${sc}><td>${d['FECHA']||''}</td><td>${d['DESCRIPCIÓN MOVIMIENTO']||''}</td><td>${d['CONCEPTO']||''}</td><td>${d['Tipo Gasto']||''}</td><td>${d['Detalle Gasto']||''}</td><td>${d['General Analisis']||''}</td><td class="num ${m>=0?'pos':'neg'}">${fmt(m)}</td></tr>`;
+  }).join('');
+}
+
+// ======== ANÁLISIS IA ========
+async function analisisIA(){
+  const btn=document.getElementById('iaBtn');
+  const panel=document.getElementById('panelIA');
+  const contenido=document.getElementById('contenidoIA');
+  panel.style.display='block';
+  contenido.innerHTML='Generando análisis con Claude Opus, esto puede tardar unos segundos...';
+  btn.disabled=true; btn.textContent='Analizando...';
+
+  const params=new URLSearchParams();
+  const token=sessionStorage.getItem('belove_token');
+  params.set('token',token);
+  params.set('action','analisis');
+  const anio=document.getElementById('filtroAnio').value;
+  const mes=document.getElementById('filtroMes').value;
+  const tipo=document.getElementById('filtroTipo').value;
+  const general=document.getElementById('filtroGeneral').value;
+  if(anio) params.set('anio',anio);
+  if(mes) params.set('mes',mes);
+  if(tipo) params.set('tipo',tipo);
+  if(general) params.set('general',general);
+
+  try{
+    const response=await fetch(API_URL+'?'+params.toString());
+    const json=await response.json();
+    if(json.error){ contenido.textContent='Error: '+json.error; return; }
+    contenido.innerHTML=formatearMarkdown(json.text||'');
+  }catch(err){
+    contenido.textContent='Error generando el análisis: '+err.message;
+  }finally{
+    btn.disabled=false; btn.textContent='✦ Análisis IA';
+  }
+}
+
+function formatearMarkdown(texto){
+  return texto
+    .replace(/^###\s(.*)$/gm,'<h3>$1</h3>')
+    .replace(/^##\s(.*)$/gm,'<h3>$1</h3>')
+    .replace(/^#\s(.*)$/gm,'<h3>$1</h3>')
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^\d+\.\s/gm,'<br>$&')
+    .replace(/^-\s/gm,'• ');
+}
+
+if(sessionStorage.getItem('belove_token')) cargarDatos(false);
+</script>
+</body>
+</html>

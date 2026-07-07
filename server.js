@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const PORT = process.env.PORT || 3000;
 const DASHBOARD_USER = process.env.DASHBOARD_USER || 'admin';
 const DASHBOARD_PASS = process.env.DASHBOARD_PASS || 'belove2024';
+const BANCO_TOKEN = process.env.BANCO_TOKEN || '';
 
 // ── SESIONES ───────────────────────────────────────────────
 const sessions = new Map();
@@ -147,6 +148,13 @@ const server = http.createServer((req, res) => {
   if (!validarSesion(req)) {
     res.writeHead(302, { 'Location': '/login' });
     res.end();
+    return;
+  }
+
+  // ── TOKEN PARA APPS SCRIPT ───────────────────────────────
+  if (req.method === 'GET' && req.url === '/api/token') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ token: BANCO_TOKEN }));
     return;
   }
 

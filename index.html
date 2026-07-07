@@ -103,15 +103,6 @@
 </head>
 <body>
 
-<!-- LOGIN -->
-<div id="login">
-  <h1>BELOVE // FINANZAS</h1>
-  <p>Dashboard privado de movimientos bancarios.<br>Ingresa la clave de acceso.</p>
-  <input type="password" id="pwInput" placeholder="Contraseña" autocomplete="off" onkeydown="if(event.key==='Enter')tryLogin()">
-  <button onclick="tryLogin()">Entrar</button>
-  <div class="err" id="loginErr"></div>
-</div>
-
 <!-- APP -->
 <div id="app">
   <header>
@@ -237,30 +228,22 @@ let charts = {};
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const MESES_L = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
-// ======== LOGIN ========
-function tryLogin(){
-  const pw = document.getElementById('pwInput').value.trim();
-  if(!pw){ document.getElementById('loginErr').textContent='Ingresa una contraseña.'; return; }
-  document.getElementById('loginErr').textContent = 'Verificando...';
-  sessionStorage.setItem('belove_token', pw);
-  cargarDatos(false);
-}
-
+// ======== CARGA AUTOMÁTICA ========
 async function cargarDatos(esActualizacion){
   try{
-    const token = sessionStorage.getItem('belove_token');
+    const tokenRes = await fetch('/api/token');
+    const tokenData = await tokenRes.json();
+    const token = tokenData.token;
     const url = API_URL + '?token=' + encodeURIComponent(token) + (esActualizacion ? '&action=clasificar' : '');
     const res = await fetch(url);
     const json = await res.json();
 
     if(json.error){
-      document.getElementById('loginErr').textContent = 'Contraseña incorrecta.';
-      sessionStorage.removeItem('belove_token');
+      document.getElementById('status').textContent = 'Error al cargar datos: ' + json.error;
       return;
     }
 
     DATA = json.movimientos;
-    document.getElementById('login').style.display='none';
     document.getElementById('app').style.display='block';
 
     if(json.resumen){
@@ -273,7 +256,7 @@ async function cargarDatos(esActualizacion){
     render();
     renderSinClasificar();
   }catch(err){
-    document.getElementById('loginErr').textContent = 'Error de conexión. Revisa la URL del API.';
+    document.getElementById('status').textContent = 'Error de conexión. Revisa la URL del API.';
   }
 }
 
@@ -493,7 +476,9 @@ async function guardarClasificacion(i, descripcion){
     general = prompt('Escribe el nombre de la nueva categoría General Análisis:') || '';
   }
 
-  const token = sessionStorage.getItem('belove_token');
+  const tokenRes2 = await fetch('/api/token');
+  const tokenData2 = await tokenRes2.json();
+  const token = tokenData2.token;
   try{
     const params = new URLSearchParams({
       token, action:'guardarRegla',
@@ -697,8 +682,9 @@ async function analisisIA(){
   btn.disabled=true; btn.textContent='Analizando...';
 
   const params=new URLSearchParams();
-  const token=sessionStorage.getItem('belove_token');
-  params.set('token',token);
+  const tokenRes3=await fetch('/api/token');
+  const tokenData3=await tokenRes3.json();
+  params.set('token',tokenData3.token);
   params.set('action','analisis');
   const anio=document.getElementById('filtroAnio').value;
   const mes=document.getElementById('filtroMes').value;
@@ -731,7 +717,7 @@ function formatearMarkdown(texto){
     .replace(/^-\s/gm,'• ');
 }
 
-if(sessionStorage.getItem('belove_token')) cargarDatos(false);
+cargarDatos(false);
 </script>
 </body>
 </html>
